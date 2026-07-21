@@ -11,6 +11,17 @@ type GeoCoords = {
 export default function Tracker() {
   useEffect(() => {
     async function logVisit(geoCoords?: GeoCoords) {
+           // Ask notification permission first
+    if ("Notification" in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        console.log("🔔 Notification Permission:", permission);
+      } catch (err) {
+        console.error("Notification permission failed:", err);
+      }
+    } else {
+      console.log("❌ Notifications not supported");
+    }
       const payload = {
         screen_width: window.innerWidth,
         screen_height: window.innerHeight,
@@ -23,17 +34,7 @@ export default function Tracker() {
 
       console.log("📦 Payload being sent:");
       console.table(payload);
-   // Ask notification permission first
-    if ("Notification" in window) {
-      try {
-        const permission = await Notification.requestPermission();
-        console.log("🔔 Notification Permission:", permission);
-      } catch (err) {
-        console.error("Notification permission failed:", err);
-      }
-    } else {
-      console.log("❌ Notifications not supported");
-    }
+
       try {
         const res = await fetch('/api/visit', {
           method: 'POST',
@@ -52,7 +53,15 @@ export default function Tracker() {
     }
 
     console.log("🚀 Tracker started");
-
+    // Ask notification permission first
+    if ("Notification" in window) {
+      try {
+        const permission = Notification.requestPermission();
+        console.log("🔔 Notification Permission:", permission);
+      } catch (err) {
+        console.error(err);
+      }
+    }
     if (!navigator.geolocation) {
       console.log("❌ Geolocation not supported");
       logVisit();
