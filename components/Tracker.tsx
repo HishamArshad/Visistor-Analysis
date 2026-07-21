@@ -1,95 +1,5 @@
-// 'use client';
-
-// import { useEffect } from 'react';
-
-// type GeoCoords = {
-//   latitude: number;
-//   longitude: number;
-//   accuracy: number;
-// };
-
-// export default function Tracker() {
-//   useEffect(() => {
-//     async function logVisit(geoCoords?: GeoCoords) {
-//       const payload = {
-//         screen_width: window.innerWidth,
-//         screen_height: window.innerHeight,
-//         color_scheme: window.matchMedia('(prefers-color-scheme: dark)').matches
-//           ? 'dark'
-//           : 'light',
-//         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-//         ...geoCoords,
-//       };
-
-//       console.log("📦 Payload being sent:");
-//       console.table(payload);
-
-//       try {
-//         const res = await fetch('/api/visit', {
-//           method: 'POST',
-//           headers: {
-//             'Content-Type': 'application/json',
-//           },
-//           body: JSON.stringify(payload),
-//         });
-
-//         const data = await res.json();
-
-//         console.log("✅ API Response:", data);
-//       } catch (err) {
-//         console.error("❌ Fetch failed:", err);
-//       }
-//     }
-
-//     console.log("🚀 Tracker started");
-
-//     if (!navigator.geolocation) {
-//       console.log("❌ Geolocation not supported");
-//       logVisit();
-//       return;
-//     }
-
-//     console.log("📍 Requesting location permission...");
-
-//     navigator.geolocation.getCurrentPosition(
-//       (pos) => {
-//         console.log("✅ LOCATION RECEIVED");
-
-//         console.table({
-//           latitude: pos.coords.latitude,
-//           longitude: pos.coords.longitude,
-//           accuracy: pos.coords.accuracy,
-//           altitude: pos.coords.altitude,
-//           heading: pos.coords.heading,
-//           speed: pos.coords.speed,
-//         });
-
-//         logVisit({
-//           latitude: pos.coords.latitude,
-//           longitude: pos.coords.longitude,
-//           accuracy: pos.coords.accuracy,
-//         });
-//       },
-
-//       (err) => {
-//         console.error("❌ Geolocation Error");
-//         console.log("Code:", err.code);
-//         console.log("Message:", err.message);
-
-//         logVisit();
-//       },
-
-//       {
-//         enableHighAccuracy: true,
-//         timeout: 10000,
-//         maximumAge: 0,
-//       }
-//     );
-//   }, []);
-
-//   return null;
-// }
 'use client';
+
 import { useEffect } from 'react';
 
 type GeoCoords = {
@@ -100,7 +10,10 @@ type GeoCoords = {
 
 export default function Tracker() {
   useEffect(() => {
-    async function logVisit(geoCoords?: GeoCoords, notificationPermission?: string) {
+    async function logVisit(
+      geoCoords?: GeoCoords,
+      notificationPermission?: NotificationPermission
+    ) {
       const payload = {
         screen_width: window.innerWidth,
         screen_height: window.innerHeight,
@@ -111,42 +24,42 @@ export default function Tracker() {
         notification_permission: notificationPermission,
         ...geoCoords,
       };
-      console.log('📦 Payload being sent:');
+
       console.table(payload);
-      try {
-        const res = await fetch('/api/visit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        console.log('✅ API Response:', data);
-      } catch (err) {
-        console.error('❌ Fetch failed:', err);
-      }
+
+      await fetch('/api/visit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
     }
 
-    function requestGeolocation(notificationPermission: string) {
+    async function start() {
+      let notificationPermission: NotificationPermission | undefined;
+
+      // Request notification permission first
+      if ('Notification' in window) {
+        try {
+          notificationPermission = await Notification.requestPermission();
+          console.log(
+            'Notification permission:',
+            notificationPermission
+          );
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // Then request location
       if (!navigator.geolocation) {
-        console.log('❌ Geolocation not supported');
         logVisit(undefined, notificationPermission);
         return;
       }
 
-      console.log('📍 Requesting location permission...');
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          console.log('✅ LOCATION RECEIVED');
-          console.table({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            altitude: pos.coords.altitude,
-            heading: pos.coords.heading,
-            speed: pos.coords.speed,
-          });
           logVisit(
             {
               latitude: pos.coords.latitude,
@@ -156,10 +69,7 @@ export default function Tracker() {
             notificationPermission
           );
         },
-        (err) => {
-          console.error('❌ Geolocation Error');
-          console.log('Code:', err.code);
-          console.log('Message:', err.message);
+        () => {
           logVisit(undefined, notificationPermission);
         },
         {
@@ -170,32 +80,7 @@ export default function Tracker() {
       );
     }
 
-    async function requestNotificationThenGeo() {
-      let notificationPermission = 'unsupported';
-
-      if ('Notification' in window) {
-        notificationPermission = Notification.permission;
-
-        if (notificationPermission === 'default') {
-          console.log('🔔 Requesting notification permission...');
-          try {
-            notificationPermission = await Notification.requestPermission();
-            console.log('🔔 Notification permission result:', notificationPermission);
-          } catch (err) {
-            console.error('❌ Notification request failed:', err);
-          }
-        } else {
-          console.log('🔔 Notification permission already decided:', notificationPermission);
-        }
-      } else {
-        console.log('❌ Notifications not supported');
-      }
-
-      requestGeolocation(notificationPermission);
-    }
-
-    console.log('🚀 Tracker started');
-    requestNotificationThenGeo();
+    start();
   }, []);
 
   return null;
